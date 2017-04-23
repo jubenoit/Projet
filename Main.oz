@@ -205,10 +205,76 @@ in
       end
    end
 
+   proc{ThreadLauch Port}
+      case Port of nil then skip
+      []H|T then
+	 thread
+	    {Simultane 1 1 H}
+	 end
+	 {TreadLauch T}
+      end
+   end
+   %Mode Simultané
+   proc{Simultane First Surface Port}
+      %Verifie si le joueur doit attendre
+      if(First == 1 || Surface == 1) then
+	 {Delay Input.turnSurface}
+	 {Send Port dive}
+      end
 
+      {Delay (({OS.rand} mod (Input.thinkMax - Input.thinkMin))+ Input.thinkMin)}
+
+      local ID Position Direction in
+	 {Send Port move(ID Position Direction)}
+	 if(direction==surface) then
+	    {GlobalMsg saySurface(ID)}
+	    {Send PortGUI Surface(ID)}
+	    {Simultane 0 1 Port}
+	 else
+	    {GlobalMsg sayMove(ID Direction)}
+	    {Send PortGUI movePlayer(ID Position)}
+	 end
+      end
+
+      {Delay (({OS.rand} mod (Input.thinkMax - Input.thinkMin))+ Input.thinkMin)}
+
+      local ID KindItem in
+	 {Send Port chargeItem(ID KindItem)}
+	 if(KindItem != null) then {Global Msg sayCharge(ID KindItem)} end
+      end
+
+      {Delay (({OS.rand} mod (Input.thinkMax - Input.thinkMin))+ Input.thinkMin)}
+
+      local RemoveList RemoveList2 in
+	 local ID KindFire in
+	    {Send Port fireItem(ID KindFire)}
+	    case KindFire of null then skip
+	    []missile(P) then RemoveList = {MissileExplodeMsg ID P Ports}
+	    []mine(P) then
+	       {Send PortGUI putMine(ID P)}
+	       {GlobalMsg sayMinePlaced(ID)}
+	    []drone(X Y) then {PassingDroneMsg Drone ID P}
+	    []sonar then {PassingSonarMsg ID P}
+	    end
+	 end
+
+	 {Delay (({OS.rand} mod (Input.thinkMax - Input.thinkMin))+ Input.thinkMin)}
+
+	 local ID Mine in
+	    {Send Port fireMine(ID Mine)}
+	    case Mine of null then skip
+	    []mine(P) then
+	       RemoveList2 = {MineExplodedMsg ID P Ports}
+	       {Send PortGUI removeMine(ID P)}
+	    end
+	 end
+
+	 {Simultane 0 0 Port}
+      end
+   end
    %Lancement du jeu
    StartSurface = {CreationSurface Input.nbPlayers}
    if(Input.isTurnByTurn == true) then {TourParTour 1 StartSurface IDs}
-   else 
+   else {ThreadLauch Port}
    end
 end
