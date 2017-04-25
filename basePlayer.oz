@@ -48,7 +48,7 @@ define
    */
    
    
-   fun{InitPosition ID Position)
+   fun{InitPosition ID Position}
       X Y Map NRow NCol in
       Map = Input.Map
       NRow = Input.NRow
@@ -65,7 +65,8 @@ define
 
    fun{NotOnPath X Y Path}
       case Path of nil then true
-      []H|T then if H.x==X || H.y==Y then false
+      []H|T then if H.x==X then false
+		    elseif H.y==Y then false
 		 else {NotOnPath X Y T}end
       end
    end
@@ -87,17 +88,17 @@ define
 		      Direction = south
 		      Position|Path
 		   else {Move ID Position Direction Path} end
-	    1 then if {Nth {Nth Map X-1} Y}==EMPTY andthen {NotOnPath X-1 Y Path}
+	   []1 then if {Nth {Nth Map X-1} Y}==EMPTY andthen {NotOnPath X-1 Y Path}
 		   then Position = pt(x:X-1 y:Y)
 		      Direction = north
 		      Position|Path
 		   else {Move ID Position Direction Path} end
-	    2 then if {Nth {Nth Map X} Y-1}==EMPTY andthen {NotOnPath X Y-1 Path}
+	   []2 then if {Nth {Nth Map X} Y-1}==EMPTY andthen {NotOnPath X Y-1 Path}
 		   then Position = pt(x:X y:Y-1)
 		      Direction = west
 		      Position|Path
 		   else {Move ID Position Direction Path} end
-	    3 then if {Nth {Nth Map X} Y+1}==EMPTY andthen {NotOnPath X Y+1 Path}
+	   []3 then if {Nth {Nth Map X} Y+1}==EMPTY andthen {NotOnPath X Y+1 Path}
 		   then Position = pt(x:X y:Y+1)
 		      Direction = east
 		      Position|Path
@@ -218,26 +219,28 @@ fun {CoordMine X Y Map}
    end
 
    fun{SayMove ID Direction}
-      %
+      true
    end
 
    fun{SaySurface ID}
-      %
+      true
    end
 
    fun{SayCharge ID KindItem}
-      %
+      true
    end
 
    fun{SayMinePlaced ID}
-      %
+      true
    end
 
    fun{SayMissileExplode ID Position Message Life OurPos}
-      Dist in
+       Dist in
       Dist = {Abs Position.x-OurPos.x} + {Abs Position.y-OurPos.y}
-      if(Dist > 1) then Message = null
-      elseif (Dist ==1) then
+      if(Dist >= Input.MaxDistanceMissile) then
+	 Message = null
+	 Life
+      elseif (Dist < Input.MaxDistanceMissile && Dist >= Input.MinDistanceMissile) then
 	    if Life-1 >0  then
 	       Message = sayDamageTaken(ID 1 Life-1)
 	       Life-1
@@ -246,7 +249,7 @@ fun {CoordMine X Y Map}
 	       Life-1
 	    end
       else
-	 if(Life-2 >0  then
+	 if(Life-2 >0)  then
 	       Message = sayDamageTaken(ID 1 Life-2)
 	       Life-2
 	    else
@@ -257,32 +260,54 @@ fun {CoordMine X Y Map}
       end	    
    end
 
-   fun{SayMineExplode ID Position Message}
-      %
+   fun{SayMineExplode ID Position Message Life OurPos}
+      Dist in
+      Dist = {Abs Position.x-OurPos.x} + {Abs Position.y-OurPos.y}
+      if(Dist >= Input.MaxDistanceMine) then
+	 Message = null
+	 Life
+      elseif (Dist < Input.MaxDistanceMine && Dist >= Input.MinDistanceMine) then
+	    if Life-1 >0  then
+	       Message = sayDamageTaken(ID 1 Life-1)
+	       Life-1
+	    else
+	       Message = sayDeath(ID)
+	       Life-1
+	    end
+      else
+	 if(Life-2 >0)  then
+	       Message = sayDamageTaken(ID 1 Life-2)
+	       Life-2
+	    else
+	       Message = sayDeath(ID)
+	       Life-2
+	   end
+	 end
+      end
    end
 
    fun{SayPassingDrone Drone ID Answer}
-      %
+     true 
    end
 
    fun{SayAnswerDrone Drone ID Answer}
-      %
+      true
    end
 
    fun{SayPassingSonar ID Answer}
-      %
+      true
    end
 
    fun{SayAnswerSonar ID Answer}
-      %
+      true
    end
 
    fun{SayDeath ID}
-      %
+      true
    end
 
    fun{SayDamageTaken ID Damage LifeLeft}
-      %
+      true
    end
 
 in
@@ -298,29 +323,31 @@ in
       end
       Port
    end
-   proc{TreatStream Stream ID Position Path Items Life Surface} % has as many parameters as you want
+   proc{TreatStream Stream ID Path Items Life Surface} % has as many parameters as you want
       case Stream of
 	 nil then skip
       []initPosition(ID Position)|S then
 	 {TreatStream Stream ID {InitPosition ID Position} Path Items Life Surface}
       []move(ID Position Direction)|S then NewState in
-	 {TreatStream Stream ID Position {Move ID Position Direction Path} Items Life Surface}
+	 {TreatStream Stream ID {Move ID Position Direction Path} Items Life Surface}
       []dive|S then 
-	 {TreatStream Stream ID Position Path Items Life Surface}
+	 {TreatStream Stream ID Path Items Life Surface}
       []chargeItem(ID KindItem)|S then
-	 {TreatStream Stream ID Position Path {ChargeItems ID KindItems Items} Life Surface}
+	 {TreatStream Stream ID Path {ChargeItems ID KindItems Items} Life Surface}
       []fireItem(ID KindFire)|S then 
-	 {TreatStream Stream ID Position Path {FireItems ID KindFire Items} Life Surface}
+	 {TreatStream Stream ID Path {FireItems ID KindFire Items} Life Surface}
       []fireMine(ID Mine)|S then 
-	 {TreatStream Stream ID Position Path {FireMine ID KindFire Items} Life Surface}
+	 {TreatStream Stream ID Path {FireMine ID KindFire Items} Life Surface}
       []isSurface(ID Answer)|S then
-	 {TreatStream Stream ID Position Path Items Life {IsSurface ID Answer Surface}}
+	 {TreatStream Stream ID Path Items Life {IsSurface ID Answer Surface}}
       []sayMove(ID Direction)|S then skip
       []saySurface(ID)|S then skip
       []sayCharge(ID KindItem)|S then skip
       []sayMinePlaced(ID)|S then skip
-      []sayMissileExplode(ID Position Message)|S then skip
+      []sayMissileExplode(ID Position Message)|S then
+	 {TreatStream Stream ID Path Items {SayMissileExplode(ID Position Message Life Path.1)}}
       []sayMineExplode(ID Position Message)|S then skip
+	 {TreatStream Stream ID Path Items {SayMineExplode(ID Position Message Life Path.1)}}
       []sayPassingDrone(Drone ID Answer)|S then skip
       []sayAnswerDrone(Drone ID Answer)|S then skip
       []sayPassingSonar(ID Answer)|S then skip

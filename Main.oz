@@ -6,6 +6,25 @@ import
 define
    PortGUI
    PortPlayes
+   PortPlayer
+   AskForSetUp
+   Ports
+   IDs
+   GlobalMsg
+   MissileExplodeMsg
+   MineExplodeMsg
+   PassingDroneMsg
+   PassingSonarMsg
+   Msg
+   StillPlaying
+   SurfaceMin
+   CreationSurface
+   Remove
+   TourParTour
+   ThreadLaunch
+   Simultane
+   StartSurface
+   
 in
    %Initialisation du Port GUI
    PortGUI = {GUI.portWindow}
@@ -44,7 +63,7 @@ in
 	 {GlobalMsg Msg T}
       end
    end
-   proc{MissileExplodeMsg ID Position P}
+   fun{MissileExplodeMsg ID Position P}
       case P of nil then nil
       []H|T then
 	 local Message in
@@ -62,7 +81,7 @@ in
 	 end
       end
    end
-   proc{MineExplodeMsg ID Position P}
+   fun{MineExplodeMsg ID Position P}
       case P of nil then nil
       []H|T then
 	 local Message in
@@ -92,7 +111,7 @@ in
    proc{PassingSonarMsg ID P}
       case P of nil then skip
       []H|T then
-	 local I Answer in
+	 local I Answer Drone in
 	    {Send H sayPassingSonar(Drone I Answer)}
 	    {Send {Nth Ports ID} sayAnswerDrone(Drone I Answer)}
 	 end
@@ -118,7 +137,7 @@ in
    fun{Remove List ListToRemove}
       case List of nil then nil
       []H|T then
-	 if H==L.1 then {RemoveList T ListToRemove.2}
+	 if H==ListToRemove.1 then {Remove T ListToRemove.2}
 	 else H|{Remove T ListToRemove}
 	 end
       end
@@ -139,9 +158,9 @@ in
 	    end
 	 end
       else %Si oui
-	 local CurrentPort RemoveList RemoveList2 TempList FinalList in
+	 local NewSurf CurrentPort RemoveList RemoveList2 TempList FinalList in
 	    CurrentPort = {Nth Ports Joueur}
-	    local NewSurf ID Position Direction in
+	    local  ID Position Direction in
 	    %Si on est au premier tour ou qu'on vient de plonger
 	       if({Nth Joueur SurfaceNum}==1) then
 		  NewSurf = {SurfaceMin Joueur SurfaceNum 1 0}
@@ -156,7 +175,7 @@ in
 		  local Surf in
 		     Surf = {SurfaceMin Joueur NewSurf 1 Input.turnSurface+1}
 		     if(Joueur==Input.nbJoueur) then
-			{TourParTout 1 Surf Alive}
+			{TourParTour 1 Surf Alive}
 		     else {TourParTour Joueur+1 Surf}
 		     end
 		  end
@@ -168,7 +187,7 @@ in
 	    %Autorisation de charger un item
 	    local ID KindItem in
 	       {Send CurrentPort chargeItem(ID KindItem)}
-	       if(KindItem != null) then {Global Msg sayCharge(ID KindItem)} end
+	       if(KindItem \= null) then {GlobalMsg sayCharge(ID KindItem)} end
 	    end
 	    %Autorisation de utiliser un item
 	    local ID KindFire in
@@ -178,8 +197,8 @@ in
 	       []mine(P) then
 		  {Send PortGUI putMine(ID P)}
 		  {GlobalMsg sayMinePlaced(ID)}
-	       []drone(X Y) then {PassingDroneMsg Drone ID P}
-	       []sonar then {PassingSonarMsg ID P}
+	       []drone(X Y) then {PassingDroneMsg drone(X Y) ID Ports}
+	       []sonar then {PassingSonarMsg ID Ports}
 	       end
 	    end
 	    %Autorisation de activer une mine
@@ -187,7 +206,7 @@ in
 	       {Send CurrentPort fireMine(ID Mine)}
 	       case Mine of null then skip
 	       []mine(P) then
-		  RemoveList2 = {MineExplodedMsg ID P Ports}
+		  RemoveList2 = {MineExplodeMsg ID P Ports}
 		  {Send PortGUI removeMine(ID P)}
 	       end
 	    end
@@ -205,19 +224,19 @@ in
       end
    end
 
-   proc{ThreadLauch Port}
+   proc{ThreadLaunch Port}
       case Port of nil then skip
       []H|T then
 	 thread
 	    {Simultane 1 1 H}
 	 end
-	 {TreadLauch T}
+	 {ThreadLaunch T}
       end
    end
    %Mode Simultané
    proc{Simultane First Surface Port}
       %Verifie si le joueur doit attendre
-      if(First == 1 || Surface == 1) then
+      if(First == 1 orelse Surface == 1) then
 	 {Delay Input.turnSurface}
 	 {Send Port dive}
       end
@@ -240,7 +259,7 @@ in
 
       local ID KindItem in
 	 {Send Port chargeItem(ID KindItem)}
-	 if(KindItem != null) then {Global Msg sayCharge(ID KindItem)} end
+	 if(KindItem \= null) then {GlobalMsg sayCharge(ID KindItem)} end
       end
 
       {Delay (({OS.rand} mod (Input.thinkMax - Input.thinkMin))+ Input.thinkMin)}
@@ -253,8 +272,8 @@ in
 	    []mine(P) then
 	       {Send PortGUI putMine(ID P)}
 	       {GlobalMsg sayMinePlaced(ID)}
-	    []drone(X Y) then {PassingDroneMsg Drone ID P}
-	    []sonar then {PassingSonarMsg ID P}
+	    []drone(X Y) then {PassingDroneMsg drone(X Y) ID Ports}
+	    []sonar then {PassingSonarMsg ID Ports}
 	    end
 	 end
 
@@ -264,7 +283,7 @@ in
 	    {Send Port fireMine(ID Mine)}
 	    case Mine of null then skip
 	    []mine(P) then
-	       RemoveList2 = {MineExplodedMsg ID P Ports}
+	       RemoveList2 = {MineExplodeMsg ID P Ports}
 	       {Send PortGUI removeMine(ID P)}
 	    end
 	 end
@@ -275,6 +294,6 @@ in
    %Lancement du jeu
    StartSurface = {CreationSurface Input.nbPlayers}
    if(Input.isTurnByTurn == true) then {TourParTour 1 StartSurface IDs}
-   else {ThreadLauch Port}
+   else {ThreadLaunch Port}
    end
 end
