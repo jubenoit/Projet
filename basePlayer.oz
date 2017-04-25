@@ -51,7 +51,6 @@ define
    fun{InitPosition ID Position)
       X Y Map NRow NCol in
       Map = Input.Map
-      CurrentMap = Map
       NRow = Input.NRow
       NCol = Input.NColumn
       
@@ -71,14 +70,15 @@ define
       end
    end
 
-   fun{Move ID Position Direction Path)
+   fun{Move ID Position Direction Path Surface}
       Dir Map X Y in
       Map = Input.Map
-      X = PlayerPosition.x
-      Y = PlayerPosition.y
+      X = Path.1.x
+      Y = Path.1.y
       Dir = {Os.rand} +1 mod 50
       if Dir == 0 then Position = Path.1
 	 Direction = surface
+	 Surface = true
 	 nil
       else Dir = {Abs{Os.rand}} mod 4
 	 case Dir of
@@ -112,42 +112,109 @@ define
       Rnd in
       Rnd = {Abs{Os.rand}} mod 4
       case Rnd of
-	 0 then items(mine:Items.mine+1 sonar:Items.sonar drone:Items.drone missile:Items.missile)
+	 0 then items(mine:Items.mine+1 sonar:Items.sonar drone:Items.drone missile:Items.missile placedmines:Items.placedmines)
 	 if Items.mine + 1 mod Input.Mine == 0 then KindItem = mine
 	 else KindItem = null end
-      []1 then items(mine:Items.mine sonar:Items.sonar+1 drone:Items.drone missile:Items.missile)
+      []1 then items(mine:Items.mine sonar:Items.sonar+1 drone:Items.drone missile:Items.missile placedmines:Items.placedmines)
 	 if Items.sonar + 1 mod Input.Sonar == 0 then KindItem = sonar
 	 else KindItem = null end
-      []2 then items(mine:Items.mine sonar:Items.sonar drone:Items.drone+1 missile:Items.missile)
+      []2 then items(mine:Items.mine sonar:Items.sonar drone:Items.drone+1 missile:Items.missile placedmines:Items.placedmines)
 	 if Items.drone + 1 mod Input.Drone == 0 then KindItem = drone
 	 else KindItem = null end
-      []3 then items(mine:Items.mine sonar:Items.sonar drone:Items.drone missile:Items.missile+1)
+      []3 then items(mine:Items.mine sonar:Items.sonar drone:Items.drone missile:Items.missile+1 placedmines:Items.placedmines)
 	 if Items.missile + 1 mod Input.Missile == 0 then KindItem = missile
 	 else KindItem = null end	  
       end
    end
 
-   fun{FireItem ID KindFire Items Position}
+fun {CoordMine X Y Map}
+      MineX MineY NRow NCol PosMine in
+      NRow = Input.NRow
+      NCol = Input.NColumn
+      
+      MineX = 1 + ({Abs{Os.rand}} mod NRow)
+      MineY = 1 + ({Abs{Os.rand}} mod NCol)
+
+      if {Nth {Nth Map MineX} MineY}==EMPTY && {Abs MineX - X} > MaxDistanceMine && {Abs MineY - Y} > MaxDistanceMine then
+	 PosMine = pt(x:MineX y:MineY)
+	 mine(PosMine)
+      else {CoordMine X Y Map}end
+   end
+
+   fun {CoordMissile X Y Map}
+      MissileX MissileY NRow NCol PosMissile in
+      NRow = Input.NRow
+      NCol = Input.NColumn
+      
+      MissileX = 1 + ({Abs{Os.rand}} mod NRow)
+      MissileY = 1 + ({Abs{Os.rand}} mod NCol)
+
+      if {Nth {Nth Map MissileX} MissileY}==EMPTY && {Abs MissileX - X} > MaxDistanceMissile && {Abs MissileY - Y} > MaxDistanceMissile then
+	 PosMissile = pt(x:MissileX y:MissileY)
+	 missile(PosMissile)
+      else {CoordMissile X Y Map}end
+   end
+
+   fun {CoordDrone}
+      DroneX DroneY NRow NCol in
+
+      Rnd = {Abs{Os.rand}} mod 2
+
+      if Rnd = 0 then NRow = Input.NRow
+	 DroneX = 1 + ({Abs{Os.rand}} mod NRow)
+	 drone(row DroneX)
+      else NCol = Input.NColumn
+	 DroneY = 1 + ({Abs{Os.rand}} mod NCol)
+	 drone(column DroneY)
+      end
+   end
+
+   %dans treatStream Map = Input.Map
+   fun{FireItem ID KindFire Items Position Map}
       Rnd in
       Rnd = {Abs{Os.rand}} mod 4
-      if Rnd == 0 andthen Items.mine > Input.Mine then KindFire = {CoordMine Position.x Position.y}
-	 items(mine:Items.mine-Input.Mine sonar:Items.sonar drone:Items.drone missile:Items.missile)
-      elseif Rnd == 3 andthen Items.missile > Input.Missile then KindFire = {CoordMissile Position.x Position.y}
-	 items(mine:Items.mine sonar:Items.sonar drone:Items.drone missile:Items.missile-Input.Missile)
-      elseif Rnd == 1 andthen Items.sonar > Input.Sonar then KindFire = sonar
-	 items(mine:Items.mine sonar:Items.sonar-Input.Sonar drone:Items.drone missile:Items.missile)
-      elseif Rnd == 2 andthen Items.drone > Input.Drone then KindFire = {CoordDrone Position.x Position.y}
-	 items(mine:Items.mine sonar:Items.sonar drone:Items.drone-Input.Drone missile:Items.missile)	       
+      if Rnd == 0 && Items.mine > Input.Mine then KindFire = {CoordMine Position.x Position.y Map}
+	 items(mine:Items.mine-Input.Mine sonar:Items.sonar drone:Items.drone missile:Items.missile placedmines:KindFire.position|Items.placedmines)
+      elseif Rnd == 3 && Items.missile > Input.Missile then KindFire = {CoordMissile Position.x Position.y Map}
+	 items(mine:Items.mine sonar:Items.sonar drone:Items.drone missile:Items.missile-Input.Missile placedmines:Items.placedmines)
+      elseif Rnd == 1 && Items.sonar > Input.Sonar then KindFire = sonar
+	 items(mine:Items.mine sonar:Items.sonar-Input.Sonar drone:Items.drone missile:Items.missile placedmines:Items.placedmines)
+      elseif Rnd == 2 && Items.drone > Input.Drone then KindFire = {CoordDrone}
+	 items(mine:Items.mine sonar:Items.sonar drone:Items.drone-Input.Drone missile:Items.missile placedmines:Items.placedmines)	       
       else KindFire = null
       end
    end
 
-   fun{FireMine ID Mine}
-      %
+   fun{Boucle List N Acc}
+      if List == nil then nil
+      else
+	 if N == Acc then {Boucle List.2 N Acc+1} 
+	 else List.1|{Boucle List.2 N Acc+1}
+	 end
+      end
    end
 
-   fun{IsSurface ID Answer}
-      %
+   fun{Size List Size}
+      if List == nil then Size
+      else {Size List Size+1}
+      end
+   end
+      
+   fun{FireMine ID Mine Item}
+      if {Size Items.placedmines 0} == 0 then null
+      else
+	 local Rnd NewItem in
+	    Rnd = ({OS.rand} mod {Size Items.placedmines 0})+1
+	    Mine={Nth Items.placedmines Rnd}
+	    Boucle{Item Rnd 1}
+	 end
+      end
+	    
+   end
+
+   fun{IsSurface ID Answer Surface}
+      Answer = Surface
+      Surface
    end
 
    fun{SayMove ID Direction}
@@ -166,8 +233,28 @@ define
       %
    end
 
-   fun{SayMissileExplode ID Position Message}
-      %
+   fun{SayMissileExplode ID Position Message Life OurPos}
+      Dist in
+      Dist = {Abs Position.x-OurPos.x} + {Abs Position.y-OurPos.y}
+      if(Dist > 1) then Message = null
+      elseif (Dist ==1) then
+	    if Life-1 >0  then
+	       Message = sayDamageTaken(ID 1 Life-1)
+	       Life-1
+	    else
+	       Message = sayDeath(ID)
+	       Life-1
+	    end
+      else
+	 if(Life-2 >0  then
+	       Message = sayDamageTaken(ID 1 Life-2)
+	       Life-2
+	    else
+	       Message = sayDeath(ID)
+	       Life-2
+	   end
+	 end
+      end	    
    end
 
    fun{SayMineExplode ID Position Message}
@@ -207,70 +294,39 @@ in
       {NewPort Stream Port}
       
       thread
-	 {TreatStream Stream ID}
+	 {TreatStream Stream ID Position Path Items Input.maxDamage Surface}
       end
       Port
    end
-   proc{TreatStream Stream ID} % has as many parameters as you want
+   proc{TreatStream Stream ID Position Path Items Life Surface} % has as many parameters as you want
       case Stream of
 	 nil then skip
-      []initPosition(ID Position)|S then NewState in
-	 NewState = {InitPosition State ID Position}
-	 {TreatStream S NewState}
+      []initPosition(ID Position)|S then
+	 {TreatStream Stream ID {InitPosition ID Position} Path Items Life Surface}
       []move(ID Position Direction)|S then NewState in
-	 NewState = {Move State ID Position Direction}
-	 {TreatStream S NewState}
-      []dive|S then NewState in
-	 NewState = {Dive State}
-	 {TreatStream S NewState}
-      []chargeItem(ID KindItem)|S then NewState in
-	 NewState = {ChargeItem State ID KindItem}
-	 {TreatStream S NewState}
-      []fireItem(ID KindFire)|S then NewState in
-	 NewState = {FireItem State ID KindFire}
-	 {TreatStream S NewState}
-      []fireMine(ID Mine)|S then NewState in
-	 NewState = {FireMine State ID Mine}
-	 {TreatStream S NewState}
-      []isSurface(ID Answer)|S then NewState in
-	 NewState = {IsSurface State ID Answer}
-	 {TreatStream S NewState}
-      []sayMove(ID Direction)|S then NewState in
-	 NewState = {SayMove State ID Direction}
-	 {TreatStream S NewState}
-      []saySurface(ID)|S then NewState in
-	 NewState = {SaySurface State ID}
-	 {TreatStream S NewState}
-      []sayCharge(ID KindItem)|S then NewState in
-	 NewState = {SayCharge State ID KindItem}
-	 {TreatStream S NewState}
-      []sayMinePlaced(ID)|S then NewState in
-	 NewState = {SayMinePlaced State ID}
-	 {TreatStream S NewState}
-      []sayMissileExplode(ID Position Message)|S then NewState in
-	 NewState = {SayMissileExplode State ID Position Message}
-	 {TreatStream S NewState}
-      []sayMineExplode(ID Position Message)|S then NewState in
-	 NewState = {SayMineExplode State ID Position Message}
-	 {TreatStream S NewState}
-      []sayPassingDrone(Drone ID Answer)|S then NewState in
-	 NewState = {SayPassingDrone State Drone ID Answer}
-	 {TreatStream S NewState}
-      []sayAnswerDrone(Drone ID Answer)|S then NewState in
-	 NewState = {SayAnswerDrone State Drone ID Answer}
-	 {TreatStream S NewState}
-      []sayPassingSonar(ID Answer)|S then NewState in
-	 NewState = {SayPassingSonar State ID Answer}
-	 {TreatStream S NewState}
-      []sayAnswerSonar(ID Answer)|S then NewState in
-	 NewState = {SayAnswerSonar State ID Answer}
-	 {TreatStream S NewState}
-      []sayDeath(ID)|S then NewState in
-	 NewState = {SayDeath State ID}
-	 {TreatStream S NewState}
-      []sayDamageTaken(ID Damage LifeLeft)|S then NewState in
-	 NewState = {SayDamageTaken State ID Damage LifeLeft}
-	 {TreatStream S NewState}
+	 {TreatStream Stream ID Position {Move ID Position Direction Path} Items Life Surface}
+      []dive|S then 
+	 {TreatStream Stream ID Position Path Items Life Surface}
+      []chargeItem(ID KindItem)|S then
+	 {TreatStream Stream ID Position Path {ChargeItems ID KindItems Items} Life Surface}
+      []fireItem(ID KindFire)|S then 
+	 {TreatStream Stream ID Position Path {FireItems ID KindFire Items} Life Surface}
+      []fireMine(ID Mine)|S then 
+	 {TreatStream Stream ID Position Path {FireMine ID KindFire Items} Life Surface}
+      []isSurface(ID Answer)|S then
+	 {TreatStream Stream ID Position Path Items Life {IsSurface ID Answer Surface}}
+      []sayMove(ID Direction)|S then skip
+      []saySurface(ID)|S then skip
+      []sayCharge(ID KindItem)|S then skip
+      []sayMinePlaced(ID)|S then skip
+      []sayMissileExplode(ID Position Message)|S then skip
+      []sayMineExplode(ID Position Message)|S then skip
+      []sayPassingDrone(Drone ID Answer)|S then skip
+      []sayAnswerDrone(Drone ID Answer)|S then skip
+      []sayPassingSonar(ID Answer)|S then skip
+      []sayAnswerSonar(ID Answer)|S then skip
+      []sayDeath(ID)|S then skip
+      []sayDamageTaken(ID Damage LifeLeft)|S then skip
       end
    end
 end
