@@ -2,6 +2,7 @@ functor
 import
    Input
    OS
+   System
 export
    portPlayer:StartPlayer
 define
@@ -11,9 +12,6 @@ define
    %variables map
    EMPTY=0
    LAND=1
-   VISITED=2
-   MINE=3
-
 
    
    /*fun {SetVal Map X Y Val}
@@ -50,16 +48,19 @@ define
    
    
    fun{InitPosition ID Position}
-      X Y Map NRow NCol in
+      X Y Map NRow NCol Pos in
       Map = Input.map
       NRow = Input.nRow
       NCol = Input.nColumn
+
+      {System.show coucou}
      
       X = 1 + ({Abs{OS.rand}} mod NRow)
       Y = 1 + ({Abs{OS.rand}} mod NCol)
 
       if {Nth {Nth Map X} Y}==EMPTY then
 	 Position = pt(x:X y:Y)
+	 {System.show Position}
 	 Position
       else {InitPosition ID Position}end
    end
@@ -326,12 +327,11 @@ in
       Items
       Path
       Position
-      ID
    in
       {NewPort Stream Port}
       
       thread
-	 {TreatStream Stream ID Position Path Items Input.maxDamage Surface}
+	 {TreatStream Stream ID Position nil items(mine:0 sonar:0 drone:0 missile:0 placedmines:0) Input.maxDamage true}
       end
       Port
    end
