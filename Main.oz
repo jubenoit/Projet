@@ -143,24 +143,24 @@ in
 	 if H==ListToRemove.1 then {Remove T ListToRemove.2}
 	 else H|{Remove T ListToRemove}
 	 end
-      endD
+      end
    end
    fun{CreationSurface N}
       if N==0 then nil
       else
-	 1|{CreationSurface N-1}
+	 2|{CreationSurface N-1}
       end
    end
    %Partie Tour par Tour
    proc{TourParTour Joueur SurfaceNum Alive}
       {System.show 1}
-      if({StillPlaying Joueur Alive}==false) then
+      /*if({StillPlaying Joueur Alive}==false) then
 	 {System.show 2}
-	 {TourParTour Joueur+1 SurfaceNum Alive} end %Le joueur est déja mort et ne peut plus jouer
-      if({Nth Joueur SurfaceNum}>1) then %Test si le joueur peut jouer ce tour
+	 {TourParTour Joueur+1 SurfaceNum Alive} end */%Le joueur est déja mort et ne peut plus jouer
+      if({Nth SurfaceNum Joueur}>1) then %Test si le joueur peut jouer ce tour
 	 local NewSurf in %si non
 	    {System.show r}
-	    NewSurf = {SurfaceMin Joueur SurfaceNum 1 {Nth Joueur SurfaceNum}-1}
+	    NewSurf = {SurfaceMin Joueur SurfaceNum 1 {Nth SurfaceNum Joueur}-1}
 	    if(Joueur ==  Input.nbPlayer) then {TourParTour 1  NewSurf Alive}
 	    else {TourParTour Joueur+1 NewSurf Alive}
 	    end
@@ -171,9 +171,10 @@ in
 	    {System.show 3}
 	    local  ID Position Direction in
 	    %Si on est au premier tour ou qu'on vient de plonger
-	       if({Nth Joueur SurfaceNum}==1) then
+	       if({Nth SurfaceNum Joueur}==1) then
 		  NewSurf = {SurfaceMin Joueur SurfaceNum 1 0}
 		  {Send CurrentPort dive}
+		  {System.show surf}
 	       else NewSurf = SurfaceNum
 	       end
 	    %Choix de la direction
@@ -181,9 +182,12 @@ in
 	       if(Direction == surface) then
 		  {GlobalMsg saySurface(ID) Ports}
 		  {Send PortGUI surface(ID)}
+		  {System.show hasSurf}
 		  local Surf in
 		     Surf = {SurfaceMin Joueur NewSurf 1 Input.turnSurface+1}
+		     {System.show Ii}
 		     if(Joueur==Input.nbJoueur) then
+			{System.show la}
 			{TourParTour 1 Surf Alive}
 		     else {TourParTour Joueur+1 Surf Alive}
 		     end
@@ -191,10 +195,12 @@ in
 	       else
 		  {GlobalMsg sayMove(ID Direction) Ports}
 		  {Send PortGUI movePlayer(ID Position)}
+		  {System.show hasmove}
 	       end
 	    end
 	    %Autorisation de charger un item
 	    local ID KindItem in
+	       {System.show test}
 	       {Send CurrentPort chargeItem(ID KindItem)}
 	       if(KindItem \= null) then {GlobalMsg sayCharge(ID KindItem) Ports} end
 	    end
@@ -202,12 +208,19 @@ in
 	    local ID KindFire in
 	       {Send CurrentPort fireItem(ID KindFire)}
 	       case KindFire of null then skip
-	       []missile(P) then RemoveList = {MissileExplodeMsg ID P Ports}
+	       []missile(P) then
+		  {System.show mis}
+		  RemoveList = {MissileExplodeMsg ID P Ports}
 	       []mine(P) then
+		  {System.show ine}
 		  {Send PortGUI putMine(ID P)}
 		  {GlobalMsg sayMinePlaced(ID) Ports}
-	       []drone(X Y) then {PassingDroneMsg drone(X Y) ID Ports}
-	       []sonar then {PassingSonarMsg ID Ports}
+	       []drone(X Y) then
+		  {System.show dro}
+		  {PassingDroneMsg drone(X Y) ID Ports}
+	       []sonar then
+		  {System.show ds}
+		  {PassingSonarMsg ID Ports}
 	       end
 	    end
 	    %Autorisation de activer une mine
@@ -219,16 +232,18 @@ in
 		  {Send PortGUI removeMine(ID P)}
 	       end
 	    end
-	    TempList={Remove Alive RemoveList}
-	    FinalList={Remove TempList RemoveList2}
-	    if(FinalList.2==nil) then skip %le joueur a gagné
-	    else
+	    {System.show re}
+	  % TempList={Remove Alive RemoveList}
+	  % FinalList={Remove TempList RemoveList2}
+	   /* if(FinalList.2==nil) then skip %le joueur a gagné
+	    else*/
+	       {System.show turn}
 	       if(Joueur == Input.nbPlayer) then
-		  {TourParTour 1 NewSurf FinalList}
+		  {TourParTour 1 NewSurf Alive}
 	       else
-		  {TourParTour Joueur+1 NewSurf FinalList}
+		  {TourParTour Joueur+1 NewSurf Alive}
 	       end%Le tour est finit et le prochain joueur peut commencer
-	    end
+	    %end
 	 end
       end
    end

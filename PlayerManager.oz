@@ -1,7 +1,6 @@
 functor
 import
-   Player042BasicAI
-   Player023AdvancedAI
+   PlayerBasicAI
 export
    playerGenerator:PlayerGenerator
 define
@@ -9,8 +8,8 @@ define
 in
    fun{PlayerGenerator Kind Color ID}
       case Kind
-      of player042basicai then {Player042BasicAI.portPlayer Color ID}
-      [] player005custom then {Player005Custom.portPlayer Color ID}
+      of player042basicai then {PlayerBasicAI.portPlayer Color ID}
+      []player043basicai then {PlayerBasicAI.portPlayer Color ID}
       end
    end
 end
