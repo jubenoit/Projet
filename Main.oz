@@ -32,11 +32,11 @@ in
    {Send PortGUI buildWindow}
 
    %Initialisation des port Joueurs
-   fun{PortPlayer Players ID}
+   fun{PortPlayer Players I}
       case Players
       of nil#nil then nil
       [](H1|T1)#(H2|T2) then
-	 {PlayerManager.playerGenerator H1 H2 id(id:ID color:H2 name:H1)}|{PortPlayer T1#T2 ID+1}
+	 {PlayerManager.playerGenerator H1 H2 I}|{PortPlayer T1#T2 I+1}
       end
    end
 
@@ -105,7 +105,7 @@ in
       []H|T then
 	 local I Answer in
 	    {Send H sayPassingDrone(Drone I Answer)}
-	    {Send {Nth Ports ID} sayAnswerDrone(Drone I Answer)}
+	    {Send {Nth Ports ID.id} sayAnswerDrone(Drone I Answer)}
 	    {PassingDroneMsg Drone ID T}
 	 end
       end
@@ -115,7 +115,7 @@ in
       []H|T then
 	 local I Answer Drone in
 	    {Send H sayPassingSonar(Drone I Answer)}
-	    {Send {Nth Ports ID} sayAnswerDrone(Drone I Answer)}
+	    {Send {Nth Ports ID.id} sayAnswerDrone(Drone I Answer)}
 	    {PassingDroneMsg Drone ID T}
 	 end
       end
@@ -153,6 +153,7 @@ in
    end
    %Partie Tour par Tour
    proc{TourParTour Joueur SurfaceNum Alive}
+      {Delay 200}
       {System.show 1}
       /*if({StillPlaying Joueur Alive}==false) then
 	 {System.show 2}
@@ -185,11 +186,13 @@ in
 		  {System.show hasSurf}
 		  local Surf in
 		     Surf = {SurfaceMin Joueur NewSurf 1 Input.turnSurface+1}
-		     {System.show Ii}
-		     if(Joueur==Input.nbJoueur) then
+		     {System.show i}
+		     if(Joueur==Input.nbPlayer) then
 			{System.show la}
 			{TourParTour 1 Surf Alive}
-		     else {TourParTour Joueur+1 Surf Alive}
+		     else
+			{System.show don}
+			{TourParTour Joueur+1 Surf Alive}
 		     end
 		  end
 	       else
@@ -208,12 +211,12 @@ in
 	    local ID KindFire in
 	       {Send CurrentPort fireItem(ID KindFire)}
 	       case KindFire of null then skip
-	       []missile(P) then
+	       []missile(pt(x:X y:Y)) then
 		  {System.show mis}
-		  RemoveList = {MissileExplodeMsg ID P Ports}
-	       []mine(P) then
+		  RemoveList = {MissileExplodeMsg ID pt(x:X y:Y) Ports}
+	       []mine(pt(x:X y:Y)) then
 		  {System.show ine}
-		  {Send PortGUI putMine(ID P)}
+		  {Send PortGUI putMine(ID pt(x:X y:Y))}
 		  {GlobalMsg sayMinePlaced(ID) Ports}
 	       []drone(X Y) then
 		  {System.show dro}
@@ -227,9 +230,9 @@ in
 	    local ID Mine in
 	       {Send CurrentPort fireMine(ID Mine)}
 	       case Mine of null then skip
-	       []mine(P) then
-		  RemoveList2 = {MineExplodeMsg ID P Ports}
-		  {Send PortGUI removeMine(ID P)}
+	       []pt(x:X y:Y) then
+		  RemoveList2 = {MineExplodeMsg ID pt(x:X y:Y) Ports}
+		  {Send PortGUI removeMine(ID)}
 	       end
 	    end
 	    {System.show re}
